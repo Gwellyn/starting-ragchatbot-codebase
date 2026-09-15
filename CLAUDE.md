@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-This project uses `uv` for Python dependency management (Python >= 3.13). Always use `uv` (e.g. `uv run`, `uv sync`, `uv add`) — do not use `pip` directly.
+This project uses `uv` for Python dependency management (Python >= 3.13). Always use `uv` for everything — running any Python file or the server (`uv run ...`), installing (`uv sync`), and adding/removing/upgrading dependencies (`uv add`, `uv remove`). Never invoke `python`/`python3`/`pip` directly, and never hand-edit `pyproject.toml`'s dependency list or `uv.lock`.
 
 ```bash
 # Install dependencies
