@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -10,7 +11,7 @@ class Config:
     """Configuration settings for the RAG system"""
     # Anthropic API settings
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    ANTHROPIC_MODEL: str = "claude-sonnet-5"
     
     # Embedding model settings
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
@@ -22,7 +23,10 @@ class Config:
     MAX_HISTORY: int = 2         # Number of conversation messages to remember
     
     # Database paths
-    CHROMA_PATH: str = "./chroma_db"  # ChromaDB storage location
+    # Absolute, anchored to this file's directory (backend/) rather than the
+    # process's cwd, so the DB resolves the same way regardless of where the
+    # app/scripts/tests are launched from.
+    CHROMA_PATH: str = str(Path(__file__).resolve().parent / "chroma_db")
 
 config = Config()
 

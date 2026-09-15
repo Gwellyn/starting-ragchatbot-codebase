@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
-    
+    newChatButton = document.getElementById('newChatButton');
+
     setupEventListeners();
     createNewSession();
     loadCourseStats();
@@ -28,8 +29,10 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
-    
-    
+
+    // New chat
+    newChatButton.addEventListener('click', startNewChat);
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -120,17 +123,48 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     const displayContent = type === 'assistant' ? marked.parse(content) : escapeHtml(content);
     
     let html = `<div class="message-content">${displayContent}</div>`;
-    
-    if (sources && sources.length > 0) {
-        html += `
-            <details class="sources-collapsible">
-                <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
-            </details>
-        `;
-    }
-    
+
     messageDiv.innerHTML = html;
+
+    if (sources && sources.length > 0) {
+        const details = document.createElement('details');
+        details.className = 'sources-collapsible';
+        const summary = document.createElement('summary');
+        summary.className = 'sources-header';
+        summary.textContent = 'Sources';
+        const list = document.createElement('ul');
+        list.className = 'sources-content';
+
+        // Collapse duplicate citations (e.g. multiple chunks from the same lesson)
+        const seen = new Set();
+        sources.forEach((source) => {
+            // Tolerate legacy plain-string sources from a stale cached script.js
+            const text = typeof source === 'string' ? source : source.text;
+            const link = typeof source === 'string' ? null : source.link;
+            const key = `${text}|${link || ''}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+
+            const item = document.createElement('li');
+            if (link && /^https?:\/\//i.test(link)) {
+                const a = document.createElement('a');
+                a.className = 'source-link';
+                a.href = link;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.textContent = text;
+                item.appendChild(a);
+            } else {
+                item.textContent = text;
+            }
+            list.appendChild(item);
+        });
+
+        details.appendChild(summary);
+        details.appendChild(list);
+        messageDiv.appendChild(details);
+    }
+
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
@@ -150,6 +184,23 @@ async function createNewSession() {
     currentSessionId = null;
     chatMessages.innerHTML = '';
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+}
+
+// Start a new chat: clear the current session's backend history (if any),
+// then reset the conversation client-side without reloading the page
+async function startNewChat() {
+    if (currentSessionId) {
+        try {
+            await fetch(`${API_URL}/session/${currentSessionId}`, {
+                method: 'DELETE'
+            });
+        } catch (error) {
+            console.error('Error clearing session:', error);
+        }
+    }
+
+    await createNewSession();
+    chatInput.focus();
 }
 
 // Load course statistics

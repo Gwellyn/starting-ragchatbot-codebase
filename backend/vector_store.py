@@ -88,16 +88,61 @@ class VectorStore:
         # Step 3: Search course content
         # Use provided limit or fall back to configured max_results
         search_limit = limit if limit is not None else self.max_results
-        
+
+        # When a specific lesson isn't pinned, one lesson's near-duplicate
+        # chunks can dominate the top results (e.g. a "conclusion" lesson
+        # that recaps the whole course crowding out every other lesson for
+        # an "outline" style query). Pull a larger candidate pool and cap
+        # how many chunks per lesson make the final cut, so results span
+        # more of the course. Skip this when lesson_number is pinned - every
+        # candidate would already share the same lesson, so capping would
+        # just throw away otherwise-relevant results.
+        diversify = lesson_number is None
+        candidate_limit = max(search_limit * 4, 20) if diversify else search_limit
+
         try:
             results = self.course_content.query(
                 query_texts=[query],
-                n_results=search_limit,
+                n_results=candidate_limit,
                 where=filter_dict
             )
-            return SearchResults.from_chroma(results)
+            parsed = SearchResults.from_chroma(results)
+            return self._diversify(parsed, search_limit) if diversify else parsed
         except Exception as e:
             return SearchResults.empty(f"Search error: {str(e)}")
+
+    @staticmethod
+    def _diversify(results: 'SearchResults', limit: int, per_lesson_cap: int = 2) -> 'SearchResults':
+        """
+        Trim relevance-ranked results down to `limit`, capping how many chunks
+        can come from the same (course, lesson) so one lesson's near-duplicate
+        chunks don't crowd out the rest of the course. Backfills with the next
+        best results, still in relevance order, if capping leaves us short.
+        """
+        if results.is_empty() or len(results.documents) <= limit:
+            return results
+
+        counts: Dict[Any, int] = {}
+        selected_idx = []
+        deferred_idx = []
+        for i, meta in enumerate(results.metadata):
+            key = (meta.get('course_title'), meta.get('lesson_number'))
+            if counts.get(key, 0) < per_lesson_cap:
+                selected_idx.append(i)
+                counts[key] = counts.get(key, 0) + 1
+            else:
+                deferred_idx.append(i)
+
+        selected_idx = selected_idx[:limit]
+        if len(selected_idx) < limit:
+            selected_idx.extend(deferred_idx[:limit - len(selected_idx)])
+        selected_idx.sort()  # restore original relevance order
+
+        return SearchResults(
+            documents=[results.documents[i] for i in selected_idx],
+            metadata=[results.metadata[i] for i in selected_idx],
+            distances=[results.distances[i] for i in selected_idx],
+        )
     
     def _resolve_course_name(self, course_name: str) -> Optional[str]:
         """Use vector search to find best matching course by name"""
@@ -246,6 +291,40 @@ class VectorStore:
             print(f"Error getting course link: {e}")
             return None
     
+    def get_course_outline(self, course_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Resolve a (possibly partial) course name and return its outline:
+        title, course link, and the full lesson list (number + title).
+        """
+        import json
+        course_title = self._resolve_course_name(course_name)
+        if not course_title:
+            return None
+
+        try:
+            results = self.course_catalog.get(ids=[course_title])
+            if not results or not results.get('metadatas'):
+                return None
+
+            metadata = results['metadatas'][0]
+            lessons_json = metadata.get('lessons_json')
+            lessons = json.loads(lessons_json) if lessons_json else []
+
+            return {
+                "title": metadata.get('title', course_title),
+                "course_link": metadata.get('course_link'),
+                "lessons": [
+                    {
+                        "lesson_number": lesson.get('lesson_number'),
+                        "lesson_title": lesson.get('lesson_title'),
+                    }
+                    for lesson in lessons
+                ],
+            }
+        except Exception as e:
+            print(f"Error getting course outline: {e}")
+            return None
+
     def get_lesson_link(self, course_title: str, lesson_number: int) -> Optional[str]:
         """Get lesson link for a given course title and lesson number"""
         import json
