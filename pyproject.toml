@@ -16,6 +16,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "black>=26.5.1",
     "httpx>=0.28.1",
     "pytest>=9.1.1",
 ]
@@ -28,3 +29,14 @@ markers = [
     "integration: tests that exercise multiple real components together",
 ]
 addopts = "-ra --strict-markers"
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.venv
+  | docs
+)/
+'''

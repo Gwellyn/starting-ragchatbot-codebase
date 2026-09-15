@@ -16,8 +16,9 @@ from vector_store import SearchResults
 class FakeVectorStore:
     """Stands in for VectorStore so tests aren't coupled to ChromaDB/embeddings."""
 
-    def __init__(self, search_result: SearchResults,
-                 lesson_links=None, course_links=None):
+    def __init__(
+        self, search_result: SearchResults, lesson_links=None, course_links=None
+    ):
         self.search_result = search_result
         self.lesson_links = lesson_links or {}
         self.course_links = course_links or {}
@@ -49,9 +50,13 @@ def make_results(rows):
 
 class TestExecuteHappyPath:
     def test_formats_single_result_with_course_and_lesson_header(self):
-        store = FakeVectorStore(make_results([
-            ("MCP uses a client-server architecture.", "MCP Course", 1),
-        ]))
+        store = FakeVectorStore(
+            make_results(
+                [
+                    ("MCP uses a client-server architecture.", "MCP Course", 1),
+                ]
+            )
+        )
         tool = CourseSearchTool(store)
 
         result = tool.execute(query="What is MCP?")
@@ -60,10 +65,14 @@ class TestExecuteHappyPath:
         assert "MCP uses a client-server architecture." in result
 
     def test_formats_multiple_results_separated_by_blank_line(self):
-        store = FakeVectorStore(make_results([
-            ("First chunk.", "Course A", 1),
-            ("Second chunk.", "Course A", 2),
-        ]))
+        store = FakeVectorStore(
+            make_results(
+                [
+                    ("First chunk.", "Course A", 1),
+                    ("Second chunk.", "Course A", 2),
+                ]
+            )
+        )
         tool = CourseSearchTool(store)
 
         result = tool.execute(query="anything")
@@ -97,7 +106,9 @@ class TestExecuteHappyPath:
 
 class TestExecuteErrorHandling:
     def test_returns_store_error_message_verbatim(self):
-        store = FakeVectorStore(SearchResults.empty("No course found matching 'Nonexistent'"))
+        store = FakeVectorStore(
+            SearchResults.empty("No course found matching 'Nonexistent'")
+        )
         tool = CourseSearchTool(store)
 
         result = tool.execute(query="anything", course_name="Nonexistent")

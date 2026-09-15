@@ -11,6 +11,7 @@ _STUB_INTENT_RE = re.compile(
     re.IGNORECASE,
 )
 
+
 class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
 
@@ -54,13 +55,16 @@ Provide only the direct answer to what was asked.
         self.base_params = {
             "model": self.model,
             "max_tokens": 800,
-            "thinking": {"type": "disabled"}
+            "thinking": {"type": "disabled"},
         }
 
-    def generate_response(self, query: str,
-                         conversation_history: Optional[str] = None,
-                         tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: Optional[str] = None,
+        tools: Optional[List] = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate AI response, allowing Claude to make up to MAX_TOOL_ROUNDS
         sequential tool calls (each a separate API round, reasoning over the
@@ -124,7 +128,9 @@ Provide only the direct answer to what was asked.
         final_response = self.client.messages.create(**final_params)
         return self._retry_if_incomplete(final_params, final_response)
 
-    def _execute_tools(self, response, tool_manager) -> Tuple[List[Dict[str, Any]], bool]:
+    def _execute_tools(
+        self, response, tool_manager
+    ) -> Tuple[List[Dict[str, Any]], bool]:
         """
         Execute every tool_use block in a response via tool_manager.
 
@@ -142,22 +148,25 @@ Provide only the direct answer to what was asked.
 
             try:
                 tool_result = tool_manager.execute_tool(
-                    content_block.name,
-                    **content_block.input
+                    content_block.name, **content_block.input
                 )
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": content_block.id,
-                    "content": tool_result,
-                })
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": content_block.id,
+                        "content": tool_result,
+                    }
+                )
             except Exception as e:
                 errored = True
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": content_block.id,
-                    "content": f"Tool '{content_block.name}' failed: {e}",
-                    "is_error": True,
-                })
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": content_block.id,
+                        "content": f"Tool '{content_block.name}' failed: {e}",
+                        "is_error": True,
+                    }
+                )
 
         return tool_results, errored
 

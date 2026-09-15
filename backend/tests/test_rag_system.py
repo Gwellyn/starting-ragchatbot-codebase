@@ -86,7 +86,9 @@ class TestQueryWiring:
         system.tool_manager.get_last_sources = MagicMock(
             side_effect=lambda: calls.append("get") or [{"text": "s", "link": None}]
         )
-        system.tool_manager.reset_sources = MagicMock(side_effect=lambda: calls.append("reset"))
+        system.tool_manager.reset_sources = MagicMock(
+            side_effect=lambda: calls.append("reset")
+        )
 
         answer, sources = system.query("anything")
 

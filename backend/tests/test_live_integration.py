@@ -31,11 +31,15 @@ def live_rag():
 
 
 class TestLiveContentQuery:
-    def test_content_question_triggers_search_and_returns_grounded_answer(self, live_rag):
+    def test_content_question_triggers_search_and_returns_grounded_answer(
+        self, live_rag
+    ):
         answer, sources = live_rag.query("What is MCP and how does it work?")
 
         assert answer, "Expected a non-empty answer for a content question"
-        assert sources, "Expected search_course_content to populate sources for a content question"
+        assert (
+            sources
+        ), "Expected search_course_content to populate sources for a content question"
 
     def test_outline_question_returns_lesson_list(self, live_rag):
         courses = live_rag.vector_store.get_existing_course_titles()
