@@ -16,5 +16,15 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.1.1",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+markers = [
+    "api: FastAPI endpoint tests using TestClient",
+    "integration: tests that exercise multiple real components together",
+]
+addopts = "-ra --strict-markers"
