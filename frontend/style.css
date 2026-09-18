@@ -152,9 +152,11 @@ body {
     padding: 0;
 }
 
-/* Header - Hidden */
+/* Header */
 header {
-    display: none;
+    display: block;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 header h1 {
@@ -858,7 +860,7 @@ details[open] .suggested-header::before {
     }
     
     header {
-        padding: 1rem;
+        padding: 1rem 1.5rem;
     }
     
     header h1 {
